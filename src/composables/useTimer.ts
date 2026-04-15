@@ -1,7 +1,7 @@
 import { ref, onUnmounted } from 'vue';
 import api from '../services/api';
 
-export function useTimer() {
+export function useTimer(onComplete?: () => void) {
     const status = ref<'running' | 'paused' | 'stopped'>('stopped');
     const timeLeft = ref(0);
     const end_time = ref<string | null>(null);
@@ -13,7 +13,6 @@ export function useTimer() {
             status.value = data.status;
             timeLeft.value = data.remaining;
             end_time.value = data.end_time;
-            // Bug #3 fix: resume countdown if timer already running on mount
             if (data.status === 'running') {
                 startTick();
             }
@@ -28,40 +27,16 @@ export function useTimer() {
         timerInterval = window.setInterval(() => {
             if (status.value === 'running') {
                 if (timeLeft.value <= 0) {
-                    // Bug #4 fix: stop interval immediately to prevent repeated calls
                     clearInterval(timerInterval!);
                     timerInterval = null;
                     status.value = 'stopped';
-                    triggerNotification();
+                    onComplete?.();
                     stopTimer();
                     return;
                 }
                 timeLeft.value = timeLeft.value - 1;
             }
         }, 1000);
-    }
-
-    async function triggerNotification() {
-        try {
-            if (!("Notification" in window)) {
-                throw new Error("This browser does not support desktop notifications");
-            }
-
-            if (Notification.permission === "granted") {
-                new Notification("Timer Finished!", {
-                    body: "Your timer has reached zero.",
-                });
-            } else if (Notification.permission !== "denied") {
-                const permission = await Notification.requestPermission();
-                if (permission === "granted") {
-                    new Notification("Timer Finished!", {
-                        body: "Your timer has reached zero.",
-                    });
-                }
-            }
-        } catch (error) {
-            console.error('Failed to send notification:', error);
-        }
     }
 
     async function startTimer(duration: number) {
@@ -76,7 +51,6 @@ export function useTimer() {
         }
     }
 
-    // Bug #2 fix: separate resume function that doesn't send duration
     async function resumeTimer() {
         try {
             const { data } = await api.post('/timer/start', {});
@@ -129,6 +103,6 @@ export function useTimer() {
         startTimer,
         resumeTimer,
         pauseTimer,
-        stopTimer
+        stopTimer,
     };
 }
