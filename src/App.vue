@@ -14,16 +14,19 @@ const {
   resumeTimer,
   pauseTimer,
   stopTimer
-} = useTimer(() => playCompletion());
+} = useTimer(playCompletion);
 
 const inputHr  = ref(0);
 const inputMin = ref(0);
 const inputSec = ref(0);
 const activeField = ref<'hr' | 'min' | 'sec' | null>(null);
 
-const totalSeconds = computed(() =>
-  (inputHr.value * 3600) + (inputMin.value * 60) + inputSec.value
-);
+const totalSeconds = computed(() => {
+  const hr  = Math.min(99, Math.max(0, inputHr.value  || 0));
+  const min = Math.min(59, Math.max(0, inputMin.value || 0));
+  const sec = Math.min(59, Math.max(0, inputSec.value || 0));
+  return (hr * 3600) + (min * 60) + sec;
+});
 
 onMounted(() => {
   fetchStatus();
@@ -62,25 +65,31 @@ async function handleStart() {
           </div>
           <div class="time-inputs">
             <input
+              aria-label="Hours"
               type="number" v-model.number="inputHr"
               min="0" max="99"
               :class="{ active: activeField === 'hr' }"
+              :disabled="status !== 'stopped'"
               @focus="activeField = 'hr'"
               @blur="activeField = null; clampField('hr')"
             />
             <span class="separator">:</span>
             <input
+              aria-label="Minutes"
               type="number" v-model.number="inputMin"
               min="0" max="59"
               :class="{ active: activeField === 'min' }"
+              :disabled="status !== 'stopped'"
               @focus="activeField = 'min'"
               @blur="activeField = null; clampField('min')"
             />
             <span class="separator">:</span>
             <input
+              aria-label="Seconds"
               type="number" v-model.number="inputSec"
               min="0" max="59"
               :class="{ active: activeField === 'sec' }"
+              :disabled="status !== 'stopped'"
               @focus="activeField = 'sec'"
               @blur="activeField = null; clampField('sec')"
             />
