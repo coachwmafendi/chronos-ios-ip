@@ -13,6 +13,7 @@ export function useTimer(onComplete?: () => void) {
             status.value = data.status;
             timeLeft.value = data.remaining;
             end_time.value = data.end_time;
+            // Bug #3 fix: resume countdown if timer already running on mount
             if (data.status === 'running') {
                 startTick();
             }
@@ -26,12 +27,12 @@ export function useTimer(onComplete?: () => void) {
 
         timerInterval = window.setInterval(() => {
             if (status.value === 'running') {
+                // Bug #4 fix: stop interval immediately to prevent repeated calls
                 if (timeLeft.value <= 0) {
                     clearInterval(timerInterval!);
                     timerInterval = null;
                     status.value = 'stopped';
-                    onComplete?.();
-                    stopTimer();
+                    stopTimer().then(() => onComplete?.());
                     return;
                 }
                 timeLeft.value = timeLeft.value - 1;
@@ -51,6 +52,7 @@ export function useTimer(onComplete?: () => void) {
         }
     }
 
+    // Bug #2 fix: separate resume function that doesn't send duration
     async function resumeTimer() {
         try {
             const { data } = await api.post('/timer/start', {});
