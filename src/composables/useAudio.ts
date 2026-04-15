@@ -5,7 +5,7 @@ export interface AudioOption {
     id: string;
 }
 
-export const AUDIO_OPTIONS: AudioOption[] = [
+const AUDIO_OPTIONS: AudioOption[] = [
     { label: 'Alarm Bell',      id: 'alarm-bell' },
     { label: 'Digital Beep',    id: 'digital-beep' },
     { label: 'Gentle Chime',    id: 'gentle-chime' },
@@ -19,6 +19,16 @@ export const AUDIO_OPTIONS: AudioOption[] = [
 ];
 
 type SoundFn = (ctx: AudioContext) => void;
+
+// Module-level singleton AudioContext to prevent resource exhaustion
+let sharedCtx: AudioContext | null = null;
+
+function getContext(): AudioContext {
+    if (!sharedCtx || sharedCtx.state === 'closed') {
+        sharedCtx = new AudioContext();
+    }
+    return sharedCtx;
+}
 
 const SOUNDS: Record<string, SoundFn> = {
     'alarm-bell': (ctx) => {
@@ -123,6 +133,7 @@ const SOUNDS: Record<string, SoundFn> = {
         gain.gain.setValueAtTime(0.3, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
         source.start(ctx.currentTime);
+        source.stop(ctx.currentTime + 0.8);
     },
     'success-fanfare': (ctx) => {
         const notes = [523.25, 659.25, 783.99, 1046.50];
@@ -158,7 +169,8 @@ export function useAudio() {
         const soundFn = SOUNDS[id];
         if (!soundFn) return;
         try {
-            const ctx = new AudioContext();
+            const ctx = getContext();
+            if (ctx.state === 'suspended') ctx.resume();
             soundFn(ctx);
         } catch (err) {
             console.error('Failed to play audio:', err);
