@@ -18,7 +18,7 @@ const {
 
 const inputHr  = ref(0);
 const inputMin = ref(0);
-const inputSec = ref(0);
+const inputSec = ref(15);
 const activeField = ref<'hr' | 'min' | 'sec' | null>(null);
 
 const totalSeconds = computed(() => {
