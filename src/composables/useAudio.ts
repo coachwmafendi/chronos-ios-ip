@@ -18,10 +18,26 @@ const AUDIO_OPTIONS: AudioOption[] = [
     { label: 'Zen Bowl',        id: 'zen-bowl' },
 ];
 
+// Natural duration of each sound in seconds — used to schedule loop repeats
+const SOUND_DURATIONS: Record<string, number> = {
+    'alarm-bell':       0.9,
+    'digital-beep':     0.25,
+    'gentle-chime':     1.5,
+    'radar':            0.35,
+    'notification-pop': 0.2,
+    'rain-drop':        0.25,
+    'forest-tone':      1.6,
+    'ocean-wave':       0.85,
+    'success-fanfare':  0.9,
+    'zen-bowl':         3.1,
+};
+
 type SoundFn = (ctx: AudioContext) => void;
 
 // Module-level singleton AudioContext to prevent resource exhaustion
 let sharedCtx: AudioContext | null = null;
+// Pending loop timer — cleared when stopping playback
+let loopTimer: number | null = null;
 
 function getContext(): AudioContext {
     if (!sharedCtx || sharedCtx.state === 'closed') {
@@ -30,8 +46,16 @@ function getContext(): AudioContext {
     return sharedCtx;
 }
 
+function stopCurrentPlayback() {
+    if (loopTimer !== null) {
+        clearTimeout(loopTimer);
+        loopTimer = null;
+    }
+}
+
 const SOUNDS: Record<string, SoundFn> = {
     'alarm-bell': (ctx) => {
+        // Repeating bell: 880Hz sine, 3 rings
         const times = [0, 0.3, 0.6];
         times.forEach(t => {
             const osc = ctx.createOscillator();
@@ -46,6 +70,7 @@ const SOUNDS: Record<string, SoundFn> = {
         });
     },
     'digital-beep': (ctx) => {
+        // Sharp square wave beep
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
@@ -57,6 +82,7 @@ const SOUNDS: Record<string, SoundFn> = {
         osc.stop(ctx.currentTime + 0.2);
     },
     'gentle-chime': (ctx) => {
+        // Soft sine wave chime, slow decay
         [523.25, 659.25, 783.99].forEach((freq, i) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
@@ -70,6 +96,7 @@ const SOUNDS: Record<string, SoundFn> = {
         });
     },
     'radar': (ctx) => {
+        // Ascending ping
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
@@ -82,6 +109,7 @@ const SOUNDS: Record<string, SoundFn> = {
         osc.stop(ctx.currentTime + 0.3);
     },
     'notification-pop': (ctx) => {
+        // Short pop: descending tone
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
@@ -94,6 +122,7 @@ const SOUNDS: Record<string, SoundFn> = {
         osc.stop(ctx.currentTime + 0.15);
     },
     'rain-drop': (ctx) => {
+        // High-pitched pluck
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
@@ -106,6 +135,7 @@ const SOUNDS: Record<string, SoundFn> = {
         osc.stop(ctx.currentTime + 0.2);
     },
     'forest-tone': (ctx) => {
+        // Low warm tone with harmonics
         [220, 330, 440].forEach((freq, i) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
@@ -119,6 +149,7 @@ const SOUNDS: Record<string, SoundFn> = {
         });
     },
     'ocean-wave': (ctx) => {
+        // Noise burst (white noise via buffer)
         const bufferSize = ctx.sampleRate * 0.8;
         const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -136,6 +167,7 @@ const SOUNDS: Record<string, SoundFn> = {
         source.stop(ctx.currentTime + 0.8);
     },
     'success-fanfare': (ctx) => {
+        // 4-note ascending fanfare
         const notes = [523.25, 659.25, 783.99, 1046.50];
         notes.forEach((freq, i) => {
             const osc = ctx.createOscillator();
@@ -150,6 +182,7 @@ const SOUNDS: Record<string, SoundFn> = {
         });
     },
     'zen-bowl': (ctx) => {
+        // Long, pure 432Hz sine tone — slow fade
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
@@ -162,27 +195,48 @@ const SOUNDS: Record<string, SoundFn> = {
     },
 };
 
+/**
+ * Play a sound on loop for the given total duration (seconds).
+ * Stops any currently running playback before starting.
+ */
+function playForDuration(id: string, totalSeconds: number) {
+    stopCurrentPlayback();
+
+    const soundFn = SOUNDS[id];
+    if (!soundFn) return;
+
+    const soundDuration = (SOUND_DURATIONS[id] ?? 1) * 1000; // ms
+    const endAt = Date.now() + totalSeconds * 1000;
+
+    try {
+        const ctx = getContext();
+        if (ctx.state === 'suspended') ctx.resume();
+
+        function playLoop() {
+            if (Date.now() >= endAt) return;
+            soundFn(ctx);
+            const remaining = endAt - Date.now();
+            // Schedule next repetition; don't exceed remaining time
+            loopTimer = window.setTimeout(playLoop, Math.min(soundDuration, remaining));
+        }
+
+        playLoop();
+    } catch (err) {
+        console.error('Failed to play audio:', err);
+    }
+}
+
 export function useAudio() {
     const selectedAudio = ref<string>(AUDIO_OPTIONS[0].id);
 
-    function playSound(id: string) {
-        const soundFn = SOUNDS[id];
-        if (!soundFn) return;
-        try {
-            const ctx = getContext();
-            if (ctx.state === 'suspended') ctx.resume();
-            soundFn(ctx);
-        } catch (err) {
-            console.error('Failed to play audio:', err);
-        }
-    }
-
+    // Preview: play for 5 seconds
     function previewSelected() {
-        playSound(selectedAudio.value);
+        playForDuration(selectedAudio.value, 5);
     }
 
+    // Completion: play for 12 seconds
     function playCompletion() {
-        playSound(selectedAudio.value);
+        playForDuration(selectedAudio.value, 12);
     }
 
     return {
