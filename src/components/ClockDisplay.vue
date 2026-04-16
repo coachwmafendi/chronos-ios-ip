@@ -14,7 +14,7 @@ const props = defineProps<{
 }>();
 
 const formattedTime = computed(() => {
-  const total = Math.floor(props.remainingSeconds);
+  const total = Math.max(0, Math.floor(props.remainingSeconds));
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
   const seconds = total % 60;

@@ -11,7 +11,7 @@ export function useTimer(onComplete?: () => void) {
         try {
             const { data } = await api.get('/timer/status');
             status.value = data.status;
-            timeLeft.value = data.remaining;
+            timeLeft.value = Math.round(data.remaining);
             end_time.value = data.end_time;
             // Bug #3 fix: resume countdown if timer already running on mount
             if (data.status === 'running') {
@@ -44,7 +44,7 @@ export function useTimer(onComplete?: () => void) {
         try {
             const { data } = await api.post('/timer/start', { duration });
             status.value = data.status;
-            timeLeft.value = data.remaining;
+            timeLeft.value = Math.round(data.remaining);
             end_time.value = data.end_time;
             startTick();
         } catch (error) {
@@ -57,7 +57,7 @@ export function useTimer(onComplete?: () => void) {
         try {
             const { data } = await api.post('/timer/start', {});
             status.value = data.status;
-            timeLeft.value = data.remaining;
+            timeLeft.value = Math.round(data.remaining);
             end_time.value = data.end_time;
             startTick();
         } catch (error) {
