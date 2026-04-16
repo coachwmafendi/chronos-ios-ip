@@ -14,9 +14,10 @@ const props = defineProps<{
 }>();
 
 const formattedTime = computed(() => {
-  const hours = Math.floor(props.remainingSeconds / 3600);
-  const minutes = Math.floor((props.remainingSeconds % 3600) / 60);
-  const seconds = props.remainingSeconds % 60;
+  const total = Math.floor(props.remainingSeconds);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
 
   return [
     hours.toString().padStart(2, '0'),
@@ -32,7 +33,7 @@ const formattedTime = computed(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .time-readout {
