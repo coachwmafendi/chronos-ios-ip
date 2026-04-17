@@ -5,9 +5,13 @@ import { useAudio } from './composables/useAudio';
 import { useHistory } from './composables/useHistory';
 import { useTheme } from './composables/useTheme';
 import ClockDisplay from './components/ClockDisplay.vue';
+import StopwatchView from './components/StopwatchView.vue';
 
 // Theme
 const { theme, toggleTheme, initTheme } = useTheme();
+
+// Tab
+const activeTab = ref<'timer' | 'stopwatch'>('timer');
 
 // Audio
 const { selectedAudio, AUDIO_OPTIONS, volume, setVolume, previewSelected, playCompletion } = useAudio();
@@ -43,6 +47,9 @@ const totalSeconds = computed(() => {
   const sec = Math.min(59, Math.max(0, inputSec.value || 0));
   return (hr * 3600) + (min * 60) + sec;
 });
+
+// Stopwatch ref for keyboard routing
+const stopwatchRef = ref<InstanceType<typeof StopwatchView> | null>(null);
 
 onMounted(() => {
   initTheme();
@@ -80,6 +87,30 @@ function handleKeydown(e: KeyboardEvent) {
   const tag = (e.target as HTMLElement).tagName;
   if (tag === 'INPUT' || tag === 'SELECT') return;
 
+  if (activeTab.value === 'stopwatch') {
+    const sw = stopwatchRef.value;
+    if (!sw) return;
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (sw.status === 'stopped') sw.start();
+      else if (sw.status === 'running') sw.stop();
+      else if (sw.status === 'paused') sw.resume();
+    }
+
+    if (e.code === 'KeyL' && sw.status === 'running') {
+      e.preventDefault();
+      sw.recordLap();
+    }
+
+    if (e.code === 'Escape' && sw.status === 'paused') {
+      e.preventDefault();
+      sw.reset();
+    }
+    return;
+  }
+
+  // Timer tab shortcuts
   if (e.code === 'Space') {
     e.preventDefault();
     if (status.value === 'running') {
@@ -103,10 +134,30 @@ function handleKeydown(e: KeyboardEvent) {
       {{ theme === 'dark' ? '☀️' : '🌙' }}
     </button>
 
-    <div class="timer-wrapper">
+    <div class="app-wrapper">
+      <!-- Tab toggle -->
+      <div class="tab-bar">
+        <button
+          class="tab-pill"
+          :class="{ active: activeTab === 'timer' }"
+          @click="activeTab = 'timer'"
+        >
+          Timer
+        </button>
+        <button
+          class="tab-pill"
+          :class="{ active: activeTab === 'stopwatch' }"
+          @click="activeTab = 'stopwatch'"
+        >
+          Stopwatch
+        </button>
+      </div>
+
+      <!-- Timer tab -->
+      <div v-show="activeTab === 'timer'" class="timer-wrapper">
       <ClockDisplay
-        :remainingSeconds="timeLeft"
-        :totalDuration="duration"
+        :remainingSeconds="status === 'stopped' ? totalSeconds : timeLeft"
+        :totalDuration="status === 'stopped' ? totalSeconds : duration"
         :status="status"
       />
 
@@ -221,6 +272,10 @@ function handleKeydown(e: KeyboardEvent) {
         </div>
       </div>
     </div>
+
+      <!-- Stopwatch tab -->
+      <StopwatchView v-show="activeTab === 'stopwatch'" ref="stopwatchRef" />
+    </div>
   </main>
 </template>
 
@@ -282,6 +337,45 @@ function handleKeydown(e: KeyboardEvent) {
   line-height: 1;
 }
 .theme-toggle:hover { opacity: 0.8; }
+
+.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+
+/* Tab bar */
+.tab-bar {
+  display: inline-flex;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 2px;
+}
+
+.tab-pill {
+  padding: 8px 24px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: transparent;
+  transition: all 0.2s;
+}
+
+.tab-pill:hover {
+  opacity: 0.8;
+  transform: none;
+}
+
+.tab-pill.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
 
 .timer-wrapper {
   display: flex;
