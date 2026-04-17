@@ -1,21 +1,37 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, onUnmounted, ref, computed } from 'vue';
 import { useTimer } from './composables/useTimer';
 import { useAudio } from './composables/useAudio';
+import { useHistory } from './composables/useHistory';
+import { useTheme } from './composables/useTheme';
 import ClockDisplay from './components/ClockDisplay.vue';
 
-const { selectedAudio, AUDIO_OPTIONS, previewSelected, playCompletion } = useAudio();
+// Theme
+const { theme, toggleTheme, initTheme } = useTheme();
 
+// Audio
+const { selectedAudio, AUDIO_OPTIONS, volume, setVolume, previewSelected, playCompletion } = useAudio();
+
+// Timer
 const {
   status,
   timeLeft,
+  duration,
   fetchStatus,
   startTimer,
   resumeTimer,
   pauseTimer,
-  stopTimer
-} = useTimer(playCompletion);
+  stopTimer,
+} = useTimer(() => {
+  playCompletion();
+  fetchHistory();
+});
 
+// History
+const { history, fetchHistory, formatDuration, formatTime } = useHistory();
+const historyOpen = ref(false);
+
+// Time picker inputs
 const inputHr  = ref(0);
 const inputMin = ref(0);
 const inputSec = ref(15);
@@ -29,7 +45,14 @@ const totalSeconds = computed(() => {
 });
 
 onMounted(() => {
+  initTheme();
   fetchStatus();
+  fetchHistory();
+  window.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
 });
 
 function clampField(field: 'hr' | 'min' | 'sec') {
@@ -46,12 +69,46 @@ async function handleStart() {
     await startTimer(totalSeconds.value);
   }
 }
+
+async function handleStop() {
+  await stopTimer();
+  fetchHistory();
+}
+
+// Keyboard shortcuts — ignore when focus is inside an input or select
+function handleKeydown(e: KeyboardEvent) {
+  const tag = (e.target as HTMLElement).tagName;
+  if (tag === 'INPUT' || tag === 'SELECT') return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (status.value === 'running') {
+      pauseTimer();
+    } else {
+      handleStart();
+    }
+  }
+
+  if (e.code === 'Escape') {
+    e.preventDefault();
+    handleStop();
+  }
+}
 </script>
 
 <template>
   <main class="container">
+    <!-- Theme toggle -->
+    <button class="theme-toggle" @click="toggleTheme" :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+      {{ theme === 'dark' ? '☀️' : '🌙' }}
+    </button>
+
     <div class="timer-wrapper">
-      <ClockDisplay :remainingSeconds="timeLeft" :status="status" />
+      <ClockDisplay
+        :remainingSeconds="timeLeft"
+        :totalDuration="duration"
+        :status="status"
+      />
 
       <div class="controls">
         <!-- Time Picker -->
@@ -106,6 +163,21 @@ async function handleStart() {
           </select>
         </div>
 
+        <!-- Volume Slider -->
+        <div class="volume-control">
+          <label>Volume</label>
+          <div class="volume-row">
+            <input
+              aria-label="Volume"
+              type="range"
+              min="0" max="100"
+              :value="volume"
+              @input="setVolume(+($event.target as HTMLInputElement).value)"
+            />
+            <span class="volume-value">{{ volume }}%</span>
+          </div>
+        </div>
+
         <!-- Buttons -->
         <div class="button-group">
           <button
@@ -119,35 +191,112 @@ async function handleStart() {
           <button v-if="status === 'running'" @click="pauseTimer" class="btn-pause">
             Pause
           </button>
-          <button @click="stopTimer()" class="btn-stop">Stop</button>
+          <button @click="handleStop" class="btn-stop">Stop</button>
+        </div>
+
+        <!-- Keyboard hint -->
+        <div class="kbd-hint">
+          <span><kbd>Space</kbd> start / pause</span>
+          <span><kbd>Esc</kbd> stop</span>
+        </div>
+
+        <!-- History -->
+        <div class="history-section">
+          <button class="history-toggle" @click="historyOpen = !historyOpen">
+            History {{ historyOpen ? '▴' : '▾' }}
+          </button>
+          <div v-if="historyOpen" class="history-list">
+            <div v-if="history.length === 0" class="history-empty">No history yet</div>
+            <div
+              v-for="entry in history"
+              :key="entry.id"
+              class="history-entry"
+              :class="entry.status"
+            >
+              <span class="h-duration">{{ formatDuration(entry.duration) }}</span>
+              <span class="h-time">{{ formatTime(entry.started_at) }}</span>
+              <span class="h-status">{{ entry.status }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </main>
 </template>
 
+<style>
+/* CSS custom properties — applied globally so ClockDisplay can use them */
+:root {
+  --bg: #1a1a1a;
+  --surface: #2a2a2a;
+  --text: #ffffff;
+  --text-muted: #888;
+  --border: #444;
+  --separator: #555;
+  --accent: #f0a030;
+  --ring-track: #2a2a2a;
+  --btn-start: #34c759;
+  --btn-pause: #ff9500;
+  --btn-stop: #ff3b30;
+}
+
+:root.light {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --text: #1a1a1a;
+  --text-muted: #666;
+  --border: #ddd;
+  --separator: #ccc;
+  --accent: #f0a030;
+  --ring-track: #e0e0e0;
+  --btn-start: #34c759;
+  --btn-pause: #ff9500;
+  --btn-stop: #ff3b30;
+}
+</style>
+
 <style scoped>
 .container {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #1a1a1a;
-  color: white;
+  background-color: var(--bg);
+  color: var(--text);
+  position: relative;
+  padding: 20px;
 }
+
+/* Theme toggle */
+.theme-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  line-height: 1;
+}
+.theme-toggle:hover { opacity: 0.8; }
 
 .timer-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 40px;
+  gap: 32px;
 }
 
 .controls {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   align-items: center;
+  width: 100%;
+  max-width: 360px;
 }
 
 /* Time Picker */
@@ -169,7 +318,7 @@ async function handleStart() {
   flex: 1;
   text-align: center;
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
   text-transform: lowercase;
   letter-spacing: 1px;
 }
@@ -182,7 +331,7 @@ async function handleStart() {
 .time-inputs {
   display: flex;
   align-items: center;
-  background: #2a2a2a;
+  background: var(--surface);
   border-radius: 16px;
   padding: 10px 14px;
   gap: 2px;
@@ -192,7 +341,7 @@ async function handleStart() {
   width: 76px;
   background: transparent;
   border: none;
-  color: white;
+  color: var(--text);
   font-size: 56px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -211,14 +360,14 @@ async function handleStart() {
 }
 
 .time-inputs input.active {
-  background: #f0a030;
+  background: var(--accent);
   color: #fff;
 }
 
 .separator {
   font-size: 48px;
   font-weight: 300;
-  color: #555;
+  color: var(--separator);
   padding: 0 2px;
   line-height: 1;
   user-select: none;
@@ -230,30 +379,65 @@ async function handleStart() {
   flex-direction: column;
   gap: 6px;
   align-items: center;
+  width: 100%;
 }
 
 .audio-selector label {
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .audio-selector select {
-  background: #2a2a2a;
-  border: 1px solid #444;
-  color: white;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
   outline: none;
-  min-width: 200px;
+  width: 100%;
   text-align: center;
 }
 
-.audio-selector select:focus {
-  border-color: #f0a030;
+.audio-selector select:focus { border-color: var(--accent); }
+
+/* Volume */
+.volume-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+}
+
+.volume-control label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.volume-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.volume-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.volume-value {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 36px;
+  text-align: right;
 }
 
 /* Buttons */
@@ -269,6 +453,7 @@ button {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  color: white;
 }
 
 button:disabled {
@@ -276,10 +461,85 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.btn-start { background-color: #34c759; color: white; }
-.btn-pause { background-color: #ff9500; color: white; }
-.btn-stop  { background-color: #ff3b30; color: white; }
+.btn-start { background-color: var(--btn-start); }
+.btn-pause { background-color: var(--btn-pause); }
+.btn-stop  { background-color: var(--btn-stop); }
 
 button:not(:disabled):hover  { opacity: 0.9; transform: scale(1.05); }
 button:not(:disabled):active { transform: scale(0.95); }
+
+/* Keyboard hint */
+.kbd-hint {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+kbd {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: inherit;
+}
+
+/* History */
+.history-section {
+  width: 100%;
+}
+
+.history-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: border-color 0.2s;
+}
+
+.history-toggle:hover {
+  border-color: var(--accent);
+  opacity: 1;
+  transform: none;
+}
+
+.history-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.history-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.history-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-radius: 8px;
+  font-size: 13px;
+  border-left: 3px solid var(--border);
+}
+
+.history-entry.completed { border-left-color: var(--btn-start); }
+.history-entry.stopped   { border-left-color: var(--btn-stop); }
+
+.h-duration { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
+.h-time     { color: var(--text-muted); }
+.h-status   { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
 </style>
