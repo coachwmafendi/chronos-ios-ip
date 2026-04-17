@@ -11,10 +11,12 @@ class Timer extends Model
         'end_time',
         'status',
         'paused_at',
+        'started_at',
     ];
 
     protected $casts = [
-        'end_time' => 'datetime',
-        'paused_at' => 'datetime',
+        'end_time'   => 'datetime',
+        'paused_at'  => 'datetime',
+        'started_at' => 'datetime',
     ];
 }

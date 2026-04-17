@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Timer;
+use App\Models\TimerHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,7 @@ class TimerController extends Controller
             $duration = $request->duration;
             $timer->duration = $duration;
             $timer->end_time = Carbon::now()->addSeconds($duration);
+            $timer->started_at = Carbon::now();
         } elseif ($timer->status === 'paused' && $timer->paused_at) {
             // Resume from pause: calculate remaining time based on paused_at
             $remaining = Carbon::parse($timer->end_time)->diffInSeconds($timer->paused_at);
@@ -40,6 +42,7 @@ class TimerController extends Controller
             'status' => $timer->status,
             'end_time' => $timer->end_time,
             'remaining' => Carbon::now()->diffInSeconds($timer->end_time),
+            'duration' => $timer->duration,
         ]);
     }
 
@@ -65,13 +68,21 @@ class TimerController extends Controller
     }
 
     /**
-     * Stop and reset the timer.
+     * Stop and reset the timer. Records history entry.
      */
-    public function stop(): JsonResponse
+    public function stop(Request $request): JsonResponse
     {
         $timer = Timer::first();
 
-        if ($timer) {
+        if ($timer && in_array($timer->status, ['running', 'paused'])) {
+            // Record history before resetting
+            $completedFlag = $request->boolean('completed', false);
+            TimerHistory::create([
+                'duration'   => $timer->duration,
+                'started_at' => $timer->started_at ?? Carbon::now()->subSeconds($timer->duration),
+                'status'     => $completedFlag ? 'completed' : 'stopped',
+            ]);
+
             $timer->status = 'stopped';
             $timer->end_time = null;
             $timer->paused_at = null;
@@ -93,6 +104,7 @@ class TimerController extends Controller
                 'status' => 'stopped',
                 'remaining' => 0,
                 'end_time' => null,
+                'duration' => $timer?->duration ?? 0,
             ]);
         }
 
@@ -102,6 +114,7 @@ class TimerController extends Controller
                 'status' => 'running',
                 'remaining' => max(0, $remaining),
                 'end_time' => $timer->end_time,
+                'duration' => $timer->duration,
             ]);
         }
 
@@ -111,10 +124,19 @@ class TimerController extends Controller
                 'status' => 'paused',
                 'remaining' => $remaining,
                 'end_time' => $timer->end_time,
+                'duration' => $timer->duration,
             ]);
         }
 
-        return response()->json(['status' => 'unknown', 'remaining' => 0]);
+        return response()->json(['status' => 'unknown', 'remaining' => 0, 'duration' => 0]);
+    }
+
+    /**
+     * Return last 20 timer history entries.
+     */
+    public function history(): JsonResponse
+    {
+        $entries = TimerHistory::orderBy('created_at', 'desc')->limit(20)->get();
+        return response()->json($entries);
     }
 }
-
