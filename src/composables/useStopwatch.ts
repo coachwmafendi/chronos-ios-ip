@@ -13,6 +13,7 @@ export function useStopwatch() {
     let startTimestamp = 0;   // performance.now() when started/resumed
     let accumulatedMs = 0;    // ms accumulated before current run segment
     let rafId: number | null = null;
+    let lastLapTotalMs = 0;
 
     function tick() {
         elapsed.value = accumulatedMs + (performance.now() - startTimestamp);
@@ -20,10 +21,12 @@ export function useStopwatch() {
     }
 
     function start() {
+        if (status.value === 'running') return;
         if (status.value === 'stopped') {
             accumulatedMs = 0;
             elapsed.value = 0;
             laps.value = [];
+            lastLapTotalMs = 0;
         }
         startTimestamp = performance.now();
         status.value = 'running';
@@ -57,13 +60,14 @@ export function useStopwatch() {
         elapsed.value = 0;
         accumulatedMs = 0;
         laps.value = [];
+        lastLapTotalMs = 0;
     }
 
     function recordLap() {
         if (status.value !== 'running') return;
         const totalElapsed = accumulatedMs + (performance.now() - startTimestamp);
-        const previousLapsTotal = laps.value.reduce((sum, l) => sum + l.splitTime, 0);
-        const splitTime = totalElapsed - previousLapsTotal;
+        const splitTime = totalElapsed - lastLapTotalMs;
+        lastLapTotalMs = totalElapsed;
         laps.value.unshift({
             lapNumber: laps.value.length + 1,
             splitTime,
