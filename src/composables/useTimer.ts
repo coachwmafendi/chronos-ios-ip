@@ -4,6 +4,7 @@ import api from '../services/api';
 export function useTimer(onComplete?: () => void) {
     const status = ref<'running' | 'paused' | 'stopped'>('stopped');
     const timeLeft = ref(0);
+    const duration = ref(0); // total duration of current/last timer
     const end_time = ref<string | null>(null);
     let timerInterval: number | null = null;
 
@@ -12,6 +13,7 @@ export function useTimer(onComplete?: () => void) {
             const { data } = await api.get('/timer/status');
             status.value = data.status;
             timeLeft.value = Math.round(data.remaining);
+            duration.value = data.duration ?? 0;
             end_time.value = data.end_time;
             // Bug #3 fix: resume countdown if timer already running on mount
             if (data.status === 'running') {
@@ -32,7 +34,7 @@ export function useTimer(onComplete?: () => void) {
                     clearInterval(timerInterval!);
                     timerInterval = null;
                     status.value = 'stopped';
-                    stopTimer().then(() => onComplete?.());
+                    stopTimer(true).then(() => onComplete?.());
                     return;
                 }
                 timeLeft.value = timeLeft.value - 1;
@@ -40,11 +42,12 @@ export function useTimer(onComplete?: () => void) {
         }, 1000);
     }
 
-    async function startTimer(duration: number) {
+    async function startTimer(secs: number) {
         try {
-            const { data } = await api.post('/timer/start', { duration });
+            const { data } = await api.post('/timer/start', { duration: secs });
             status.value = data.status;
             timeLeft.value = Math.round(data.remaining);
+            duration.value = data.duration ?? secs;
             end_time.value = data.end_time;
             startTick();
         } catch (error) {
@@ -58,6 +61,7 @@ export function useTimer(onComplete?: () => void) {
             const { data } = await api.post('/timer/start', {});
             status.value = data.status;
             timeLeft.value = Math.round(data.remaining);
+            duration.value = data.duration ?? duration.value;
             end_time.value = data.end_time;
             startTick();
         } catch (error) {
@@ -78,9 +82,9 @@ export function useTimer(onComplete?: () => void) {
         }
     }
 
-    async function stopTimer() {
+    async function stopTimer(completed = false) {
         try {
-            const { data } = await api.post('/timer/stop');
+            const { data } = await api.post('/timer/stop', { completed });
             status.value = data.status;
             timeLeft.value = 0;
             end_time.value = null;
@@ -100,6 +104,7 @@ export function useTimer(onComplete?: () => void) {
     return {
         status,
         timeLeft,
+        duration,
         end_time,
         fetchStatus,
         startTimer,

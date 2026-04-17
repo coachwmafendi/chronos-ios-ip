@@ -119,7 +119,7 @@ async function handleStart() {
           <button v-if="status === 'running'" @click="pauseTimer" class="btn-pause">
             Pause
           </button>
-          <button @click="stopTimer" class="btn-stop">Stop</button>
+          <button @click="stopTimer()" class="btn-stop">Stop</button>
         </div>
       </div>
     </div>
