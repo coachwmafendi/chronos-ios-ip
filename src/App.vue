@@ -6,12 +6,14 @@ import { useHistory } from './composables/useHistory';
 import { useTheme } from './composables/useTheme';
 import ClockDisplay from './components/ClockDisplay.vue';
 import StopwatchView from './components/StopwatchView.vue';
+import AlarmView from './components/AlarmView.vue';
+import WorldClockView from './components/WorldClockView.vue';
 
 // Theme
 const { theme, toggleTheme, initTheme } = useTheme();
 
 // Tab
-const activeTab = ref<'timer' | 'stopwatch'>('timer');
+const activeTab = ref<'timer' | 'stopwatch' | 'alarm' | 'worldclock'>('timer');
 
 // Audio
 const { selectedAudio, AUDIO_OPTIONS, volume, setVolume, previewSelected, playCompletion } = useAudio();
@@ -32,7 +34,7 @@ const {
 });
 
 // History
-const { history, fetchHistory, formatDuration, formatTime } = useHistory();
+const { history, fetchHistory, deleteHistory, formatDuration, formatTime } = useHistory();
 const historyOpen = ref(false);
 
 // Time picker inputs
@@ -50,6 +52,8 @@ const totalSeconds = computed(() => {
 
 // Stopwatch ref for keyboard routing
 const stopwatchRef = ref<InstanceType<typeof StopwatchView> | null>(null);
+const alarmRef = ref<InstanceType<typeof AlarmView> | null>(null);
+const worldClockRef = ref<InstanceType<typeof WorldClockView> | null>(null);
 
 onMounted(() => {
   initTheme();
@@ -129,28 +133,46 @@ function handleKeydown(e: KeyboardEvent) {
 
 <template>
   <main class="container">
-    <!-- Theme toggle -->
-    <button class="theme-toggle" @click="toggleTheme" :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
-      {{ theme === 'dark' ? '☀️' : '🌙' }}
-    </button>
-
     <div class="app-wrapper">
-      <!-- Tab toggle -->
-      <div class="tab-bar">
-        <button
-          class="tab-pill"
-          :class="{ active: activeTab === 'timer' }"
-          @click="activeTab = 'timer'"
-        >
-          Timer
-        </button>
-        <button
-          class="tab-pill"
-          :class="{ active: activeTab === 'stopwatch' }"
-          @click="activeTab = 'stopwatch'"
-        >
-          Stopwatch
-        </button>
+      <!-- Top bar: tabs + actions -->
+      <div class="top-bar">
+        <div class="tab-bar">
+          <button
+            class="tab-pill"
+            :class="{ active: activeTab === 'timer' }"
+            @click="activeTab = 'timer'"
+          >
+            Timer
+          </button>
+          <button
+            class="tab-pill"
+            :class="{ active: activeTab === 'stopwatch' }"
+            @click="activeTab = 'stopwatch'"
+          >
+            Stopwatch
+          </button>
+          <button
+            class="tab-pill"
+            :class="{ active: activeTab === 'alarm' }"
+            @click="activeTab = 'alarm'"
+          >
+            Alarm
+          </button>
+          <button
+            class="tab-pill"
+            :class="{ active: activeTab === 'worldclock' }"
+            @click="activeTab = 'worldclock'"
+          >
+            World Clock
+          </button>
+        </div>
+        <div class="top-actions">
+          <button v-if="activeTab === 'alarm'" class="top-btn" @click="alarmRef?.openAddForm()">+</button>
+          <button v-if="activeTab === 'worldclock'" class="top-btn" @click="worldClockRef?.openCityPicker()">+</button>
+          <button class="top-btn" @click="toggleTheme" :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+            {{ theme === 'dark' ? '☀️' : '🌙' }}
+          </button>
+        </div>
       </div>
 
       <!-- Timer tab -->
@@ -267,6 +289,7 @@ function handleKeydown(e: KeyboardEvent) {
               <span class="h-duration">{{ formatDuration(entry.duration) }}</span>
               <span class="h-time">{{ formatTime(entry.started_at) }}</span>
               <span class="h-status">{{ entry.status }}</span>
+              <button class="h-delete" @click="deleteHistory(entry.id)">×</button>
             </div>
           </div>
         </div>
@@ -275,11 +298,29 @@ function handleKeydown(e: KeyboardEvent) {
 
       <!-- Stopwatch tab -->
       <StopwatchView v-show="activeTab === 'stopwatch'" ref="stopwatchRef" />
+
+      <!-- Alarm tab -->
+      <AlarmView v-show="activeTab === 'alarm'" class="alarm-tab" ref="alarmRef" />
+
+      <!-- World Clock tab -->
+      <WorldClockView v-show="activeTab === 'worldclock'" class="alarm-tab" ref="worldClockRef" />
     </div>
   </main>
 </template>
 
 <style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  background-color: #1a1a1a;
+}
+
 /* CSS custom properties — applied globally so ClockDisplay can use them */
 :root {
   --bg: #1a1a1a;
@@ -315,18 +356,42 @@ function handleKeydown(e: KeyboardEvent) {
   min-height: 100vh;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  flex-direction: column;
   background-color: var(--bg);
   color: var(--text);
   position: relative;
   padding: 20px;
+  font-family: 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Theme toggle */
-.theme-toggle {
+/* Top bar */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  position: relative;
+}
+
+.top-bar .tab-bar {
+  /* stays naturally centered */
+}
+
+.top-bar .top-actions {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  right: 0;
+}
+
+.top-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.top-btn {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -335,14 +400,20 @@ function handleKeydown(e: KeyboardEvent) {
   cursor: pointer;
   transition: opacity 0.2s;
   line-height: 1;
+  color: var(--text);
 }
-.theme-toggle:hover { opacity: 0.8; }
+.top-btn:hover { opacity: 0.8; }
 
 .app-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 32px;
+  gap: 20px;
+  width: 100%;
+}
+
+.alarm-tab {
+  align-self: stretch;
 }
 
 /* Tab bar */
@@ -364,6 +435,7 @@ function handleKeydown(e: KeyboardEvent) {
   color: var(--text-muted);
   background: transparent;
   transition: all 0.2s;
+  font-family: 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .tab-pill:hover {
@@ -381,13 +453,13 @@ function handleKeydown(e: KeyboardEvent) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 32px;
+  gap: 16px;
 }
 
 .controls {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
   align-items: center;
   width: 100%;
   max-width: 360px;
@@ -432,11 +504,11 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 .time-inputs input {
-  width: 76px;
+  width: 52px;
   background: transparent;
   border: none;
   color: var(--text);
-  font-size: 56px;
+  font-size: 36px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -459,7 +531,7 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 .separator {
-  font-size: 48px;
+  font-size: 32px;
   font-weight: 300;
   color: var(--separator);
   padding: 0 2px;
@@ -490,6 +562,7 @@ function handleKeydown(e: KeyboardEvent) {
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 14px;
+  font-family: inherit;
   cursor: pointer;
   outline: none;
   width: 100%;
@@ -537,17 +610,19 @@ function handleKeydown(e: KeyboardEvent) {
 /* Buttons */
 .button-group {
   display: flex;
-  gap: 12px;
+  gap: 14px;
 }
 
 button {
-  padding: 10px 24px;
-  border-radius: 12px;
+  padding: 14px 36px;
+  border-radius: 980px;
   border: none;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: opacity 0.2s;
   color: white;
+  font-family: 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 button:disabled {
@@ -559,8 +634,8 @@ button:disabled {
 .btn-pause { background-color: var(--btn-pause); }
 .btn-stop  { background-color: var(--btn-stop); }
 
-button:not(:disabled):hover  { opacity: 0.9; transform: scale(1.05); }
-button:not(:disabled):active { transform: scale(0.95); }
+button:not(:disabled):hover  { opacity: 0.85; }
+button:not(:disabled):active { opacity: 0.7; }
 
 /* Keyboard hint */
 .kbd-hint {
@@ -636,4 +711,33 @@ kbd {
 .h-duration { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
 .h-time     { color: var(--text-muted); }
 .h-status   { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+
+.h-delete {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.history-entry:hover .h-delete {
+  opacity: 1;
+}
+
+.h-delete:hover {
+  background: var(--btn-stop);
+  color: #fff;
+  opacity: 1;
+}
 </style>

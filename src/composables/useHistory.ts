@@ -21,6 +21,15 @@ export function useHistory() {
         }
     }
 
+    async function deleteHistory(id: number) {
+        try {
+            await api.delete(`/timer/history/${id}`);
+            history.value = history.value.filter(e => e.id !== id);
+        } catch (error) {
+            console.error('Error deleting history entry:', error);
+        }
+    }
+
     function formatDuration(seconds: number): string {
         const h = Math.floor(seconds / 3600);
         const m = Math.floor((seconds % 3600) / 60);
@@ -36,6 +45,7 @@ export function useHistory() {
     return {
         history,
         fetchHistory,
+        deleteHistory,
         formatDuration,
         formatTime,
     };

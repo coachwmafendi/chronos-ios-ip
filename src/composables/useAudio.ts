@@ -33,7 +33,7 @@ const SOUND_DURATIONS: Record<string, number> = {
 
 type SoundFn = (ctx: AudioContext, dest: AudioNode) => void;
 
-const VOLUME_KEY = 'timerx-volume';
+const VOLUME_KEY = 'chronos-volume';
 
 // Module-level singletons
 let sharedCtx: AudioContext | null = null;
@@ -205,7 +205,7 @@ const SOUNDS: Record<string, SoundFn> = {
  * Play a sound on loop for the given total duration (seconds).
  * Stops any currently running playback before starting.
  */
-function playForDuration(id: string, totalSeconds: number) {
+async function playForDuration(id: string, totalSeconds: number) {
     stopCurrentPlayback();
 
     const soundFn = SOUNDS[id];
@@ -216,7 +216,8 @@ function playForDuration(id: string, totalSeconds: number) {
 
     try {
         const { ctx, master } = getAudio();
-        if (ctx.state === 'suspended') ctx.resume();
+        // Must await resume — sounds scheduled on a suspended context are silently dropped
+        if (ctx.state === 'suspended') await ctx.resume();
 
         function playLoop() {
             if (Date.now() >= endAt) return;

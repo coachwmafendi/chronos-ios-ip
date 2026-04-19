@@ -63,6 +63,11 @@ export function useStopwatch() {
         lastLapTotalMs = 0;
     }
 
+    function clearLaps() {
+        laps.value = [];
+        lastLapTotalMs = 0;
+    }
+
     function recordLap() {
         if (status.value !== 'running') return;
         const totalElapsed = accumulatedMs + (performance.now() - startTimestamp);
@@ -98,6 +103,7 @@ export function useStopwatch() {
         resume,
         reset,
         recordLap,
+        clearLaps,
         formatElapsed,
     };
 }

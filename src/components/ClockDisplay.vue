@@ -1,24 +1,24 @@
 <template>
   <div class="clock-display">
     <div class="ring-wrapper">
-      <svg class="progress-ring" viewBox="0 0 260 260" width="260" height="260">
+      <svg class="progress-ring" viewBox="0 0 240 240" width="240" height="240">
         <!-- Track -->
         <circle
-          cx="130" cy="130" r="110"
+          cx="120" cy="120" r="105"
           fill="none"
           stroke="var(--ring-track)"
-          stroke-width="16"
+          stroke-width="12"
         />
         <!-- Progress arc -->
         <circle
-          cx="130" cy="130" r="110"
+          cx="120" cy="120" r="105"
           fill="none"
           stroke="var(--accent)"
-          stroke-width="16"
+          stroke-width="12"
           stroke-linecap="round"
           :stroke-dasharray="circumference"
           :stroke-dashoffset="dashOffset"
-          transform="rotate(-90 130 130)"
+          transform="rotate(-90 120 120)"
           class="progress-arc"
         />
       </svg>
@@ -39,7 +39,7 @@ const props = defineProps<{
   status: string;
 }>();
 
-const circumference = 2 * Math.PI * 110; // 691.15
+const circumference = 2 * Math.PI * 105; // 659.73
 
 const formattedTime = computed(() => {
   const total = Math.max(0, Math.floor(props.remainingSeconds));
@@ -66,8 +66,8 @@ const dashOffset = computed(() => {
 
 .ring-wrapper {
   position: relative;
-  width: 260px;
-  height: 260px;
+  width: 240px;
+  height: 240px;
 }
 
 .progress-ring {
@@ -90,7 +90,7 @@ const dashOffset = computed(() => {
 }
 
 .time-readout {
-  font-size: 52px;
+  font-size: 36px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--text);

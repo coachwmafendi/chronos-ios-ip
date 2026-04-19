@@ -2,7 +2,7 @@ import { ref } from 'vue';
 
 export type Theme = 'dark' | 'light';
 
-const STORAGE_KEY = 'timerx-theme';
+const STORAGE_KEY = 'chronos-theme';
 
 export function useTheme() {
     const saved = (localStorage.getItem(STORAGE_KEY) as Theme) ?? 'dark';

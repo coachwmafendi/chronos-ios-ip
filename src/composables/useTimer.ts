@@ -58,7 +58,7 @@ export function useTimer(onComplete?: () => void) {
     // Bug #2 fix: separate resume function that doesn't send duration
     async function resumeTimer() {
         try {
-            const { data } = await api.post('/timer/start', {});
+            const { data } = await api.post('/timer/start', { resume: true });
             status.value = data.status;
             timeLeft.value = Math.round(data.remaining);
             duration.value = data.duration ?? duration.value;

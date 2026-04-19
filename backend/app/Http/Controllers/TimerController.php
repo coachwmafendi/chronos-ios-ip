@@ -28,7 +28,7 @@ class TimerController extends Controller
             $timer->started_at = Carbon::now();
         } elseif ($timer->status === 'paused' && $timer->paused_at) {
             // Resume from pause: calculate remaining time based on paused_at
-            $remaining = Carbon::parse($timer->end_time)->diffInSeconds($timer->paused_at);
+            $remaining = Carbon::parse($timer->paused_at)->diffInSeconds($timer->end_time);
             $timer->end_time = Carbon::now()->addSeconds($remaining);
         } else {
             return response()->json(['error' => 'No duration provided and no paused timer to resume'], 400);
@@ -119,7 +119,7 @@ class TimerController extends Controller
         }
 
         if ($timer->status === 'paused') {
-            $remaining = Carbon::parse($timer->end_time)->diffInSeconds($timer->paused_at);
+            $remaining = Carbon::parse($timer->paused_at)->diffInSeconds($timer->end_time);
             return response()->json([
                 'status' => 'paused',
                 'remaining' => $remaining,
@@ -138,5 +138,15 @@ class TimerController extends Controller
     {
         $entries = TimerHistory::orderBy('created_at', 'desc')->limit(20)->get();
         return response()->json($entries);
+    }
+
+    /**
+     * Delete a single history entry.
+     */
+    public function deleteHistory(int $id): JsonResponse
+    {
+        $entry = TimerHistory::findOrFail($id);
+        $entry->delete();
+        return response()->json(['deleted' => true]);
     }
 }

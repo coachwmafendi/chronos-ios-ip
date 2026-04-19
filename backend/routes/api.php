@@ -14,4 +14,5 @@ Route::prefix('timer')->group(function () {
     Route::post('pause', [TimerController::class, 'pause']);
     Route::post('stop', [TimerController::class, 'stop']);
     Route::get('history', [TimerController::class, 'history']);
+    Route::delete('history/{id}', [TimerController::class, 'deleteHistory']);
 });

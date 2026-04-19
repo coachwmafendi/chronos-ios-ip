@@ -43,15 +43,18 @@
     </div>
 
     <!-- Lap list -->
-    <div v-if="laps.length > 0" class="sw-laps">
-      <div
-        v-for="lap in laps"
-        :key="lap.lapNumber"
-        class="sw-lap-row"
-      >
-        <span class="sw-lap-num">Lap {{ lap.lapNumber }}</span>
-        <span class="sw-lap-time">{{ formatElapsed(lap.splitTime) }}</span>
+    <div v-if="laps.length > 0" class="sw-laps-section">
+      <div class="sw-laps">
+        <div
+          v-for="lap in laps"
+          :key="lap.lapNumber"
+          class="sw-lap-row"
+        >
+          <span class="sw-lap-num">Lap {{ lap.lapNumber }}</span>
+          <span class="sw-lap-time">{{ formatElapsed(lap.splitTime) }}</span>
+        </div>
       </div>
+      <button class="sw-clear-laps" @click="clearLaps">Clear Laps</button>
     </div>
   </div>
 </template>
@@ -68,6 +71,7 @@ const {
   resume,
   reset,
   recordLap,
+  clearLaps,
   formatElapsed,
 } = useStopwatch();
 
@@ -81,7 +85,8 @@ defineExpose({ status, start, stop, resume, reset, recordLap });
   align-items: center;
   gap: 24px;
   width: 100%;
-  max-width: 360px;
+  max-width: 420px;
+  font-family: 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .sw-time {
@@ -90,11 +95,12 @@ defineExpose({ status, start, stop, resume, reset, recordLap });
   font-variant-numeric: tabular-nums;
   color: var(--text);
   line-height: 1;
-  font-family: 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: inherit;
 }
 
 .sw-status {
-  font-size: 12px;
+  font-size: 13px;
+  font-family: inherit;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-muted);
@@ -107,15 +113,43 @@ defineExpose({ status, start, stop, resume, reset, recordLap });
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .sw-buttons {
   display: flex;
-  gap: 12px;
+  gap: 14px;
 }
 
-.btn-lap {
+.sw-buttons button {
+  padding: 14px 36px;
+  font-size: 16px;
+  font-family: inherit;
+  border-radius: 980px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+  transition: opacity 0.2s;
+}
+
+.sw-buttons button:hover {
+  opacity: 0.85;
+}
+
+.sw-buttons button:active {
+  opacity: 0.7;
+}
+
+.sw-buttons .btn-start {
+  background-color: var(--btn-start);
+}
+
+.sw-buttons .btn-stop {
+  background-color: var(--btn-stop);
+}
+
+.sw-buttons .btn-lap {
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
@@ -124,7 +158,8 @@ defineExpose({ status, start, stop, resume, reset, recordLap });
 .sw-kbd-hint {
   display: flex;
   gap: 16px;
-  font-size: 11px;
+  font-size: 12px;
+  font-family: inherit;
   color: var(--text-muted);
 }
 
@@ -132,25 +167,26 @@ defineExpose({ status, start, stop, resume, reset, recordLap });
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 1px 5px;
-  font-size: 10px;
+  padding: 2px 6px;
+  font-size: 11px;
   font-family: inherit;
 }
 
 .sw-laps {
   width: 100%;
   background: var(--surface);
-  border-radius: 8px;
-  padding: 8px;
-  max-height: 200px;
+  border-radius: 10px;
+  padding: 10px;
+  max-height: 240px;
   overflow-y: auto;
 }
 
 .sw-lap-row {
   display: flex;
   justify-content: space-between;
-  padding: 6px 8px;
-  font-size: 13px;
+  padding: 10px 12px;
+  font-size: 16px;
+  font-family: inherit;
   border-bottom: 1px solid var(--border);
 }
 
@@ -166,5 +202,30 @@ defineExpose({ status, start, stop, resume, reset, recordLap });
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: var(--text);
+}
+
+.sw-laps-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sw-clear-laps {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 980px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  align-self: center;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.sw-clear-laps:hover {
+  border-color: var(--btn-stop);
+  color: var(--btn-stop);
 }
 </style>
