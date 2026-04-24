@@ -1,40 +1,48 @@
 import { ref, onUnmounted } from 'vue';
+import Database from '@tauri-apps/plugin-sql';
 
 export interface Alarm {
     id: string;
-    hour: number;       // 0-23
-    minute: number;     // 0-59
+    hour: number;
+    minute: number;
     label: string;
-    repeatDays: number[];  // 0=Sun, 1=Mon, ..., 6=Sat
+    repeatDays: number[];  // 0=Sun … 6=Sat
     sound: string;
     enabled: boolean;
     snoozeEnabled: boolean;
-    snoozeMinutes: number;  // 1, 5, 10, 15, 30
+    snoozeMinutes: number;
 }
 
-const API_BASE = 'http://127.0.0.1:8000/api/alarms';
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Global state to track active firing alarm
+// Global state for the currently ringing alarm
 export const activeFiringAlarm = ref<Alarm | null>(null);
+
+async function getDb() {
+    return Database.load('sqlite:chronos.db');
+}
+
+function rowToAlarm(row: any): Alarm {
+    return {
+        id: String(row.id),
+        hour: row.hour,
+        minute: row.minute,
+        label: row.label ?? '',
+        repeatDays: typeof row.repeat_days === 'string' ? JSON.parse(row.repeat_days) : (row.repeat_days ?? []),
+        sound: row.sound ?? 'alarm-bell',
+        enabled: Boolean(row.enabled),
+        snoozeEnabled: Boolean(row.snooze_enabled),
+        snoozeMinutes: row.snooze_minutes ?? 5,
+    };
+}
 
 async function loadAlarms(): Promise<Alarm[]> {
     try {
-        const res = await fetch(API_BASE);
-        if (!res.ok) throw new Error('Fetch failed');
-        const data = await res.json();
-        // Map backend snake_case to frontend camelCase
-        return data.map((a: any) => ({
-            id: a.id.toString(),
-            hour: a.hour,
-            minute: a.minute,
-            label: a.label,
-            repeatDays: a.repeat_days || [],
-            sound: a.sound,
-            enabled: a.enabled,
-            snoozeEnabled: a.snooze_enabled,
-            snoozeMinutes: a.snooze_minutes,
-        }));
+        const db = await getDb();
+        const rows: any[] = await db.select(
+            'SELECT id, label, hour, minute, repeat_days, sound, enabled, snooze_enabled, snooze_minutes FROM alarms ORDER BY hour, minute'
+        );
+        return rows.map(rowToAlarm);
     } catch {
         return [];
     }
@@ -42,8 +50,8 @@ async function loadAlarms(): Promise<Alarm[]> {
 
 export function useAlarms() {
     const alarms = ref<Alarm[]>([]);
-    const firedAlarms = new Set<string>(); // track fired alarms by "id-HH:MM" to avoid re-firing
-    const snoozedAlarms = new Map<string, number>(); // alarm id -> snooze fire timestamp (ms)
+    const firedAlarms = new Set<string>();
+    const snoozedAlarms = new Map<string, number>();
     let checkInterval: number | null = null;
     let onAlarmFire: ((alarm: Alarm) => void) | null = null;
 
@@ -52,43 +60,55 @@ export function useAlarms() {
     }
 
     async function addAlarm(alarm: Omit<Alarm, 'id'>) {
-        const res = await fetch(API_BASE, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                ...alarm,
-                repeat_days: alarm.repeatDays,
-                snooze_enabled: alarm.snoozeEnabled,
-                snooze_minutes: alarm.snoozeMinutes,
-            }),
-        });
-        if (res.ok) await refresh();
+        const db = await getDb();
+        await db.execute(
+            'INSERT INTO alarms (label, hour, minute, repeat_days, sound, enabled, snooze_enabled, snooze_minutes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                alarm.label || null,
+                alarm.hour,
+                alarm.minute,
+                JSON.stringify(alarm.repeatDays),
+                alarm.sound,
+                alarm.enabled ? 1 : 0,
+                alarm.snoozeEnabled ? 1 : 0,
+                alarm.snoozeMinutes,
+            ]
+        );
+        await refresh();
     }
 
     async function updateAlarm(id: string, updates: Partial<Omit<Alarm, 'id'>>) {
-        const body: any = { ...updates };
-        if ('repeatDays' in updates) body.repeat_days = updates.repeatDays;
-        if ('snoozeEnabled' in updates) body.snooze_enabled = updates.snoozeEnabled;
-        if ('snoozeMinutes' in updates) body.snooze_minutes = updates.snoozeMinutes;
-        delete body.repeatDays;
-        delete body.snoozeEnabled;
-        delete body.snoozeMinutes;
-
-        await fetch(`${API_BASE}/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        });
+        const db = await getDb();
+        const rows: any[] = await db.select('SELECT * FROM alarms WHERE id=?', [id]);
+        if (!rows.length) return;
+        const current = rowToAlarm(rows[0]);
+        const merged = { ...current, ...updates };
+        await db.execute(
+            'UPDATE alarms SET label=?, hour=?, minute=?, repeat_days=?, sound=?, enabled=?, snooze_enabled=?, snooze_minutes=? WHERE id=?',
+            [
+                merged.label || null,
+                merged.hour,
+                merged.minute,
+                JSON.stringify(merged.repeatDays),
+                merged.sound,
+                merged.enabled ? 1 : 0,
+                merged.snoozeEnabled ? 1 : 0,
+                merged.snoozeMinutes,
+                id,
+            ]
+        );
         await refresh();
     }
 
     async function deleteAlarm(id: string) {
-        await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+        const db = await getDb();
+        await db.execute('DELETE FROM alarms WHERE id=?', [id]);
         await refresh();
     }
 
     async function toggleAlarm(id: string) {
-        await fetch(`${API_BASE}/${id}/toggle`, { method: 'POST' });
+        const db = await getDb();
+        await db.execute('UPDATE alarms SET enabled = NOT enabled WHERE id=?', [id]);
         await refresh();
     }
 
@@ -116,8 +136,7 @@ export function useAlarms() {
     function snoozeAlarm(id: string) {
         const alarm = alarms.value.find(a => a.id === id);
         if (alarm) {
-            const nowMs = Date.now();
-            snoozedAlarms.set(id, nowMs + alarm.snoozeMinutes * 60 * 1000);
+            snoozedAlarms.set(id, Date.now() + alarm.snoozeMinutes * 60 * 1000);
             activeFiringAlarm.value = null;
         }
     }

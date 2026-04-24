@@ -1,0 +1,55 @@
+[ 9473754ms] [ERROR] Error fetching timer status: TypeError: Cannot read properties of undefined (reading 'invoke')
+    at invoke (http://localhost:1420/node_modules/.vite/deps/@tauri-apps_plugin-sql.js?v=5c317ed6:79:37)
+    at _Database.load (http://localhost:1420/node_modules/.vite/deps/@tauri-apps_plugin-sql.js?v=5c317ed6:104:25)
+    at getDb (http://localhost:1420/src/composables/useTimer.ts?t=1777000705993:4:19)
+    at fetchStatus (http://localhost:1420/src/composables/useTimer.ts?t=1777000705993:14:24)
+    at http://localhost:1420/src/App.vue?t=1777000705993:72:7
+    at http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:5267:40
+    at callWithErrorHandling (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2353:19)
+    at callWithAsyncErrorHandling (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2360:17)
+    at hook.__weh.hook.__weh (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:5247:19)
+    at flushPostFlushCbs (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2538:28) @ http://localhost:1420/src/composables/useTimer.ts?t=1777000705993:32
+[ 9481923ms] [ERROR] Error fetching timer status: TypeError: Cannot read properties of undefined (reading 'invoke')
+    at invoke (http://localhost:1420/node_modules/.vite/deps/@tauri-apps_plugin-sql.js?v=5c317ed6:79:37)
+    at _Database.load (http://localhost:1420/node_modules/.vite/deps/@tauri-apps_plugin-sql.js?v=5c317ed6:104:25)
+    at getDb (http://localhost:1420/src/composables/useTimer.ts?t=1777000705993:4:19)
+    at fetchStatus (http://localhost:1420/src/composables/useTimer.ts?t=1777000705993:14:24)
+    at http://localhost:1420/src/App.vue?t=1777000714778:72:7
+    at http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:5267:40
+    at callWithErrorHandling (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2353:19)
+    at callWithAsyncErrorHandling (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2360:17)
+    at hook.__weh.hook.__weh (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:5247:19)
+    at flushPostFlushCbs (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2538:28) @ http://localhost:1420/src/composables/useTimer.ts?t=1777000705993:32
+[ 9481923ms] [ERROR] Error fetching timer history: TypeError: Cannot read properties of undefined (reading 'invoke')
+    at invoke (http://localhost:1420/node_modules/.vite/deps/@tauri-apps_plugin-sql.js?v=5c317ed6:79:37)
+    at _Database.load (http://localhost:1420/node_modules/.vite/deps/@tauri-apps_plugin-sql.js?v=5c317ed6:104:25)
+    at getDb (http://localhost:1420/src/composables/useHistory.ts?t=1777000714778:4:19)
+    at fetchHistory (http://localhost:1420/src/composables/useHistory.ts?t=1777000714778:10:24)
+    at http://localhost:1420/src/App.vue?t=1777000714778:73:7
+    at http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:5267:40
+    at callWithErrorHandling (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2353:19)
+    at callWithAsyncErrorHandling (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2360:17)
+    at hook.__weh.hook.__weh (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:5247:19)
+    at flushPostFlushCbs (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2538:28) @ http://localhost:1420/src/composables/useHistory.ts?t=1777000714778:15
+[ 9492439ms] [ERROR] Error fetching timer status: TypeError: Cannot read properties of undefined (reading 'invoke')
+    at invoke (http://localhost:1420/node_modules/.vite/deps/@tauri-apps_plugin-sql.js?v=5c317ed6:79:37)
+    at _Database.load (http://localhost:1420/node_modules/.vite/deps/@tauri-apps_plugin-sql.js?v=5c317ed6:104:25)
+    at getDb (http://localhost:1420/src/composables/useTimer.ts?t=1777000705993:4:19)
+    at fetchStatus (http://localhost:1420/src/composables/useTimer.ts?t=1777000705993:14:24)
+    at http://localhost:1420/src/App.vue?t=1777000714778:72:7
+    at http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:5267:40
+    at callWithErrorHandling (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2353:19)
+    at callWithAsyncErrorHandling (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2360:17)
+    at hook.__weh.hook.__weh (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:5247:19)
+    at flushPostFlushCbs (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2538:28) @ http://localhost:1420/src/composables/useTimer.ts?t=1777000705993:32
+[ 9492439ms] [ERROR] Error fetching timer history: TypeError: Cannot read properties of undefined (reading 'invoke')
+    at invoke (http://localhost:1420/node_modules/.vite/deps/@tauri-apps_plugin-sql.js?v=5c317ed6:79:37)
+    at _Database.load (http://localhost:1420/node_modules/.vite/deps/@tauri-apps_plugin-sql.js?v=5c317ed6:104:25)
+    at getDb (http://localhost:1420/src/composables/useHistory.ts?t=1777000714778:4:19)
+    at fetchHistory (http://localhost:1420/src/composables/useHistory.ts?t=1777000714778:10:24)
+    at http://localhost:1420/src/App.vue?t=1777000714778:73:7
+    at http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:5267:40
+    at callWithErrorHandling (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2353:19)
+    at callWithAsyncErrorHandling (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2360:17)
+    at hook.__weh.hook.__weh (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:5247:19)
+    at flushPostFlushCbs (http://localhost:1420/node_modules/.vite/deps/vue.js?v=5c317ed6:2538:28) @ http://localhost:1420/src/composables/useHistory.ts?t=1777000714778:15

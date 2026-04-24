@@ -34,8 +34,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "shortDescription": "A simple time companion.",
+"shortDescription": "A simple time companion.",
     "longDescription": "Chronos brings essential time tools into a clean and focused experience.\n\nDesigned and developed by Wan Mohd Afendi using Rust and Tauri.",
-    "copyright": "© 2026 Wan Mohd Afendi. All rights reserved."
+    "copyright": "© 2026 Wan Mohd Afendi. All rights reserved.",
+    "macOS": {
+      "minimumSystemVersion": "13.0"
+    }
   }
 }

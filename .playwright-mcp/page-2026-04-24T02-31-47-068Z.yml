@@ -1,0 +1,25 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: Stopwatch
+      - button "Switch to light mode" [ref=e8] [cursor=pointer]:
+        - img [ref=e9]
+    - navigation [ref=e15]:
+      - button "Timer" [ref=e16] [cursor=pointer]:
+        - img [ref=e17]
+        - generic [ref=e20]: Timer
+      - button "Stopwatch" [active] [ref=e21] [cursor=pointer]:
+        - img [ref=e22]
+        - generic [ref=e25]: Stopwatch
+      - button "Alarm" [ref=e26] [cursor=pointer]:
+        - img [ref=e27]
+        - generic [ref=e32]: Alarm
+      - button "World Clock" [ref=e33] [cursor=pointer]:
+        - img [ref=e34]
+        - generic [ref=e37]: World Clock
+    - generic [ref=e208]:
+      - generic [ref=e209]: 00:00.00
+      - generic [ref=e210]: stopped
+      - generic [ref=e211]:
+        - button "Start" [ref=e213] [cursor=pointer]
+        - generic [ref=e215]: Space start

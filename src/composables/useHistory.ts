@@ -1,12 +1,15 @@
 import { ref } from 'vue';
-import api from '../services/api';
+import Database from '@tauri-apps/plugin-sql';
 
 export interface HistoryEntry {
     id: number;
-    duration: number;        // seconds
-    started_at: string;      // ISO datetime string
+    duration: number;
+    started_at: string;
     status: 'completed' | 'stopped';
-    created_at: string;
+}
+
+async function getDb() {
+    return Database.load('sqlite:chronos.db');
 }
 
 export function useHistory() {
@@ -14,8 +17,11 @@ export function useHistory() {
 
     async function fetchHistory() {
         try {
-            const { data } = await api.get('/timer/history');
-            history.value = data;
+            const db = await getDb();
+            const rows: HistoryEntry[] = await db.select(
+                'SELECT id, duration, started_at, status FROM timer_history ORDER BY id DESC LIMIT 20'
+            );
+            history.value = rows;
         } catch (error) {
             console.error('Error fetching timer history:', error);
         }
@@ -23,7 +29,8 @@ export function useHistory() {
 
     async function deleteHistory(id: number) {
         try {
-            await api.delete(`/timer/history/${id}`);
+            const db = await getDb();
+            await db.execute('DELETE FROM timer_history WHERE id=?', [id]);
             history.value = history.value.filter(e => e.id !== id);
         } catch (error) {
             console.error('Error deleting history entry:', error);

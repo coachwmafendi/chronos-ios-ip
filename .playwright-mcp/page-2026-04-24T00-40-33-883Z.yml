@@ -1,0 +1,79 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: Timer
+      - button "Switch to light mode" [ref=e8] [cursor=pointer]:
+        - img [ref=e9]
+    - navigation [ref=e15]:
+      - button "Timer" [ref=e16] [cursor=pointer]:
+        - img [ref=e17]
+        - generic [ref=e20]: Timer
+      - button "Stopwatch" [ref=e21] [cursor=pointer]:
+        - img [ref=e22]
+        - generic [ref=e25]: Stopwatch
+      - button "Alarm" [ref=e26] [cursor=pointer]:
+        - img [ref=e27]
+        - generic [ref=e32]: Alarm
+      - button "World Clock" [ref=e33] [cursor=pointer]:
+        - img [ref=e34]
+        - generic [ref=e37]: World Clock
+    - generic [ref=e38]:
+      - generic [ref=e40]:
+        - img [ref=e41]
+        - generic [ref=e44]:
+          - generic [ref=e45]: 00:00:15
+          - generic [ref=e46]: stopped
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - generic [ref=e50]: hr
+            - generic [ref=e51]: min
+            - generic [ref=e52]: sec
+          - generic [ref=e53]:
+            - spinbutton "Hours" [ref=e54]: "0"
+            - generic [ref=e55]: ":"
+            - spinbutton "Minutes" [ref=e56]: "0"
+            - generic [ref=e57]: ":"
+            - spinbutton "Seconds" [ref=e58]: "15"
+        - generic [ref=e59]:
+          - generic [ref=e60]: Sound
+          - combobox [ref=e61] [cursor=pointer]:
+            - option "Alarm Bell" [selected]
+            - option "Digital Beep"
+            - option "Gentle Chime"
+            - option "Radar"
+            - option "Notification Pop"
+            - option "Rain Drop"
+            - option "Forest Tone"
+            - option "Ocean Wave"
+            - option "Success Fanfare"
+            - option "Zen Bowl"
+        - generic [ref=e62]:
+          - generic [ref=e63]: Volume
+          - generic [ref=e64]:
+            - slider "Volume" [ref=e65] [cursor=pointer]: "80"
+            - generic [ref=e66]: 80%
+        - generic [ref=e67]:
+          - button "Start" [ref=e68] [cursor=pointer]
+          - button "Stop" [ref=e69] [cursor=pointer]
+        - generic [ref=e70]:
+          - generic [ref=e71]: Space start / pause
+          - generic [ref=e72]: Esc stop
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - generic [ref=e75]: Presets
+            - button "+ Save" [ref=e76] [cursor=pointer]
+          - generic [ref=e77]:
+            - generic [ref=e78] [cursor=pointer]:
+              - generic [ref=e79]: 5 min
+              - button "×" [ref=e80]
+            - generic [ref=e81] [cursor=pointer]:
+              - generic [ref=e82]: 10 min
+              - button "×" [ref=e83]
+            - generic [ref=e84] [cursor=pointer]:
+              - generic [ref=e85]: 25 min
+              - button "×" [ref=e86]
+            - generic [ref=e87] [cursor=pointer]:
+              - generic [ref=e88]: 1 hour
+              - button "×" [ref=e89]
+        - button "History ▾" [ref=e91] [cursor=pointer]
