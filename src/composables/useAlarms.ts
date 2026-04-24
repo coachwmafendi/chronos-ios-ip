@@ -12,60 +12,84 @@ export interface Alarm {
     snoozeMinutes: number;  // 1, 5, 10, 15, 30
 }
 
-const STORAGE_KEY = 'chronos-alarms';
+const API_BASE = 'http://127.0.0.1:8000/api/alarms';
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function loadAlarms(): Alarm[] {
+// Global state to track active firing alarm
+export const activeFiringAlarm = ref<Alarm | null>(null);
+
+async function loadAlarms(): Promise<Alarm[]> {
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
+        const res = await fetch(API_BASE);
+        if (!res.ok) throw new Error('Fetch failed');
+        const data = await res.json();
+        // Map backend snake_case to frontend camelCase
+        return data.map((a: any) => ({
+            id: a.id.toString(),
+            hour: a.hour,
+            minute: a.minute,
+            label: a.label,
+            repeatDays: a.repeat_days || [],
+            sound: a.sound,
+            enabled: a.enabled,
+            snoozeEnabled: a.snooze_enabled,
+            snoozeMinutes: a.snooze_minutes,
+        }));
     } catch {
         return [];
     }
 }
 
-function saveAlarms(alarms: Alarm[]) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(alarms));
-}
-
 export function useAlarms() {
-    const alarms = ref<Alarm[]>(loadAlarms());
+    const alarms = ref<Alarm[]>([]);
     const firedAlarms = new Set<string>(); // track fired alarms by "id-HH:MM" to avoid re-firing
     const snoozedAlarms = new Map<string, number>(); // alarm id -> snooze fire timestamp (ms)
     let checkInterval: number | null = null;
     let onAlarmFire: ((alarm: Alarm) => void) | null = null;
 
-    function persist() {
-        saveAlarms(alarms.value);
+    async function refresh() {
+        alarms.value = await loadAlarms();
     }
 
-    function addAlarm(alarm: Omit<Alarm, 'id'>) {
-        alarms.value.push({
-            ...alarm,
-            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    async function addAlarm(alarm: Omit<Alarm, 'id'>) {
+        const res = await fetch(API_BASE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...alarm,
+                repeat_days: alarm.repeatDays,
+                snooze_enabled: alarm.snoozeEnabled,
+                snooze_minutes: alarm.snoozeMinutes,
+            }),
         });
-        persist();
+        if (res.ok) await refresh();
     }
 
-    function updateAlarm(id: string, updates: Partial<Omit<Alarm, 'id'>>) {
-        const idx = alarms.value.findIndex(a => a.id === id);
-        if (idx !== -1) {
-            alarms.value[idx] = { ...alarms.value[idx], ...updates };
-            persist();
-        }
+    async function updateAlarm(id: string, updates: Partial<Omit<Alarm, 'id'>>) {
+        const body: any = { ...updates };
+        if ('repeatDays' in updates) body.repeat_days = updates.repeatDays;
+        if ('snoozeEnabled' in updates) body.snooze_enabled = updates.snoozeEnabled;
+        if ('snoozeMinutes' in updates) body.snooze_minutes = updates.snoozeMinutes;
+        delete body.repeatDays;
+        delete body.snoozeEnabled;
+        delete body.snoozeMinutes;
+
+        await fetch(`${API_BASE}/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        await refresh();
     }
 
-    function deleteAlarm(id: string) {
-        alarms.value = alarms.value.filter(a => a.id !== id);
-        persist();
+    async function deleteAlarm(id: string) {
+        await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+        await refresh();
     }
 
-    function toggleAlarm(id: string) {
-        const alarm = alarms.value.find(a => a.id === id);
-        if (alarm) {
-            alarm.enabled = !alarm.enabled;
-            persist();
-        }
+    async function toggleAlarm(id: string) {
+        await fetch(`${API_BASE}/${id}/toggle`, { method: 'POST' });
+        await refresh();
     }
 
     function formatTime12(hour: number, minute: number): { time: string; period: string } {
@@ -89,6 +113,20 @@ export function useAlarms() {
         onAlarmFire = cb;
     }
 
+    function snoozeAlarm(id: string) {
+        const alarm = alarms.value.find(a => a.id === id);
+        if (alarm) {
+            const nowMs = Date.now();
+            snoozedAlarms.set(id, nowMs + alarm.snoozeMinutes * 60 * 1000);
+            activeFiringAlarm.value = null;
+        }
+    }
+
+    function stopAlarm(id: string) {
+        snoozedAlarms.delete(id);
+        activeFiringAlarm.value = null;
+    }
+
     function checkAlarms() {
         const now = new Date();
         const currentDay = now.getDay();
@@ -99,13 +137,12 @@ export function useAlarms() {
         for (const alarm of alarms.value) {
             if (!alarm.enabled) continue;
 
-            // Check snoozed alarms
             const snoozeTime = snoozedAlarms.get(alarm.id);
             if (snoozeTime) {
                 if (nowMs >= snoozeTime) {
                     snoozedAlarms.delete(alarm.id);
+                    activeFiringAlarm.value = alarm;
                     if (onAlarmFire) onAlarmFire(alarm);
-                    // Re-snooze if snooze is still enabled
                     if (alarm.snoozeEnabled) {
                         snoozedAlarms.set(alarm.id, nowMs + alarm.snoozeMinutes * 60 * 1000);
                     }
@@ -120,21 +157,18 @@ export function useAlarms() {
                 const shouldFire = alarm.repeatDays.length === 0 || alarm.repeatDays.includes(currentDay);
                 if (shouldFire) {
                     firedAlarms.add(fireKey);
+                    activeFiringAlarm.value = alarm;
                     if (onAlarmFire) onAlarmFire(alarm);
-                    // Schedule snooze if enabled
                     if (alarm.snoozeEnabled) {
                         snoozedAlarms.set(alarm.id, nowMs + alarm.snoozeMinutes * 60 * 1000);
                     }
-                    // Disable non-repeating alarms after firing
                     if (alarm.repeatDays.length === 0 && !alarm.snoozeEnabled) {
-                        alarm.enabled = false;
-                        persist();
+                        toggleAlarm(alarm.id);
                     }
                 }
             }
         }
 
-        // Clean up old fired keys (keep only current minute)
         const currentKey = `${currentHour}:${currentMinute}`;
         for (const key of firedAlarms) {
             if (!key.endsWith(currentKey)) {
@@ -143,8 +177,8 @@ export function useAlarms() {
         }
     }
 
-    // Start checking every 10 seconds
-    checkInterval = window.setInterval(checkAlarms, 10000);
+    checkInterval = window.setInterval(checkAlarms, 1000);
+    refresh();
 
     onUnmounted(() => {
         if (checkInterval !== null) {
@@ -162,6 +196,9 @@ export function useAlarms() {
         formatTime12,
         formatRepeatDays,
         setOnAlarmFire,
+        snoozeAlarm,
+        stopAlarm,
         DAY_NAMES,
+        refresh,
     };
 }

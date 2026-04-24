@@ -70,14 +70,15 @@ export function useWorldClock() {
 
     function tick() {
         now.value = new Date();
+        timer = requestAnimationFrame(tick);
     }
 
     onMounted(() => {
-        timer = window.setInterval(tick, 1000);
+        timer = requestAnimationFrame(tick);
     });
 
     onUnmounted(() => {
-        if (timer !== null) clearInterval(timer);
+        if (timer !== null) cancelAnimationFrame(timer);
     });
 
     function addCity(city: City) {

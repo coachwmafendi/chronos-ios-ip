@@ -45,13 +45,25 @@
     <!-- Lap list -->
     <div v-if="laps.length > 0" class="sw-laps-section">
       <div class="sw-laps">
+        <div class="sw-laps-header">
+          <span class="sw-lap-num">Lap</span>
+          <span class="sw-lap-time">Split</span>
+          <span class="sw-lap-time">Total</span>
+          <span class="sw-lap-action"></span>
+        </div>
         <div
-          v-for="lap in laps"
+          v-for="(lap, index) in laps"
           :key="lap.lapNumber"
           class="sw-lap-row"
+          :class="{
+            'lap-fastest': isFastest(lap.splitTime),
+            'lap-slowest': isSlowest(lap.splitTime)
+          }"
         >
-          <span class="sw-lap-num">Lap {{ lap.lapNumber }}</span>
+          <span class="sw-lap-num">#{{ lap.lapNumber }}</span>
           <span class="sw-lap-time">{{ formatElapsed(lap.splitTime) }}</span>
+          <span class="sw-lap-time">{{ formatElapsed(lap.totalTime) }}</span>
+          <button class="sw-lap-del" @click="removeLap(index)">×</button>
         </div>
       </div>
       <button class="sw-clear-laps" @click="clearLaps">Clear Laps</button>
@@ -60,6 +72,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useStopwatch } from '../composables/useStopwatch';
 
 const {
@@ -71,9 +84,30 @@ const {
   resume,
   reset,
   recordLap,
+  removeLap,
   clearLaps,
   formatElapsed,
 } = useStopwatch();
+
+const minSplit = computed(() => {
+  if (laps.value.length === 0) return Infinity;
+  return Math.min(...laps.value.map(l => l.splitTime));
+});
+
+const maxSplit = computed(() => {
+  if (laps.value.length === 0) return -Infinity;
+  return Math.max(...laps.value.map(l => l.splitTime));
+});
+
+function isFastest(time: number) {
+  if (laps.value.length <= 1) return false;
+  return time === minSplit.value;
+}
+
+function isSlowest(time: number) {
+  if (laps.value.length <= 1) return false;
+  return time === maxSplit.value;
+}
 
 defineExpose({ status, start, stop, resume, reset, recordLap });
 </script>
@@ -176,18 +210,40 @@ defineExpose({ status, start, stop, resume, reset, recordLap });
   width: 100%;
   background: var(--surface);
   border-radius: 10px;
-  padding: 10px;
+  padding: 0;
   max-height: 240px;
   overflow-y: auto;
+}
+
+.sw-laps-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
 }
 
 .sw-lap-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 10px 12px;
   font-size: 16px;
   font-family: inherit;
   border-bottom: 1px solid var(--border);
+}
+
+.sw-lap-row.lap-fastest .sw-lap-time {
+  color: var(--btn-start);
+}
+
+.sw-lap-row.lap-slowest .sw-lap-time {
+  color: var(--btn-stop);
 }
 
 .sw-lap-row:last-child {
@@ -196,12 +252,36 @@ defineExpose({ status, start, stop, resume, reset, recordLap });
 
 .sw-lap-num {
   color: var(--text-muted);
+  width: 40px;
+  text-align: left;
 }
 
 .sw-lap-time {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: var(--text);
+  width: 80px;
+  text-align: right;
+}
+
+.sw-lap-action {
+  width: 30px;
+  text-align: right;
+}
+
+.sw-lap-del {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.sw-lap-del:hover {
+  color: var(--btn-stop);
 }
 
 .sw-laps-section {

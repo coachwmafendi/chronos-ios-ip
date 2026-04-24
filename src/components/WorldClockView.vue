@@ -36,80 +36,83 @@
 
     <template v-else>
       <!-- World map -->
-      <div class="wc-map-container">
+      <div class="wc-map-container" ref="mapContainer">
         <svg
+          ref="mapSvg"
           class="wc-map"
           viewBox="0 0 800 400"
           preserveAspectRatio="xMidYMid meet"
         >
-          <!-- Map background -->
-          <rect width="800" height="400" fill="#111" />
+          <g class="map-zoom-group">
+            <!-- Map background -->
+            <rect width="800" height="400" fill="#111" />
 
-          <!-- Latitude/longitude grid -->
-          <g stroke="#1e1e1e" stroke-width="0.4" fill="none">
-            <line v-for="i in 35" :key="'v'+i" :x1="i*800/36" y1="0" :x2="i*800/36" y2="400" />
-            <line v-for="i in 17" :key="'h'+i" x1="0" :y1="i*400/18" x2="800" :y2="i*400/18" />
-          </g>
-          <!-- Equator & prime meridian -->
-          <line x1="0" y1="200" x2="800" y2="200" stroke="#252525" stroke-width="0.6" />
-          <line x1="400" y1="0" x2="400" y2="400" stroke="#252525" stroke-width="0.6" />
+            <!-- Latitude/longitude grid -->
+            <g stroke="#1e1e1e" stroke-width="0.4" fill="none">
+              <line v-for="i in 35" :key="'v'+i" :x1="i*800/36" y1="0" :x2="i*800/36" y2="400" />
+              <line v-for="i in 17" :key="'h'+i" x1="0" :y1="i*400/18" x2="800" :y2="i*400/18" />
+            </g>
+            <!-- Equator & prime meridian -->
+            <line x1="0" y1="200" x2="800" y2="200" stroke="#252525" stroke-width="0.6" />
+            <line x1="400" y1="0" x2="400" y2="400" stroke="#252525" stroke-width="0.6" />
 
-          <!-- Countries (Natural Earth 110m) -->
-          <g fill="#2d3035" stroke="#3a3f45" stroke-width="0.5" stroke-linejoin="round">
-            <path v-for="(d, i) in countryPaths" :key="i" :d="d" />
-          </g>
+            <!-- Countries (Natural Earth 110m) -->
+            <g fill="#2d3035" stroke="#3a3f45" stroke-width="0.5" stroke-linejoin="round">
+              <path v-for="(d, i) in countryPaths" :key="i" :d="d" />
+            </g>
 
-          <!-- Night overlay with soft edge -->
-          <defs>
-            <filter id="nightBlur">
-              <feGaussianBlur stdDeviation="4" />
-            </filter>
-          </defs>
-          <polygon
-            :points="terminatorPoints"
-            fill="rgba(0,0,0,0.5)"
-            filter="url(#nightBlur)"
-          />
-
-          <!-- City markers -->
-          <g v-for="(city, idx) in selectedCities" :key="city.name">
-            <!-- Glow for active -->
-            <circle
-              v-if="idx === activeCityIndex"
-              :cx="cityCoords(city).x"
-              :cy="cityCoords(city).y"
-              r="8"
-              fill="none"
-              stroke="#f0a030"
-              stroke-width="1"
-              opacity="0.4"
+            <!-- Night overlay with soft edge -->
+            <defs>
+              <filter id="nightBlur">
+                <feGaussianBlur stdDeviation="4" />
+              </filter>
+            </defs>
+            <polygon
+              :points="terminatorPoints"
+              fill="rgba(0,0,0,0.5)"
+              filter="url(#nightBlur)"
             />
-            <circle
-              :cx="cityCoords(city).x"
-              :cy="cityCoords(city).y"
-              :r="idx === activeCityIndex ? 5 : 3.5"
-              :fill="idx === activeCityIndex ? '#f0a030' : '#aaa'"
-              :stroke="idx === activeCityIndex ? '#ffd080' : '#fff'"
-              stroke-width="1"
-              class="city-marker"
-              @click="activeCityIndex = idx"
-            />
-            <text
-              :x="cityCoords(city).x + 10"
-              :y="cityCoords(city).y + 4"
-              fill="#fff"
-              font-size="11"
-              font-weight="600"
-              font-family="SF Pro Text, -apple-system, sans-serif"
-              class="city-map-label"
-            >{{ city.name }}</text>
-            <text
-              :x="cityCoords(city).x + 10"
-              :y="cityCoords(city).y + 16"
-              fill="#888"
-              font-size="9"
-              font-family="SF Pro Text, -apple-system, sans-serif"
-            >{{ formatCityTime(city) }}</text>
+
+            <!-- City markers -->
+            <g v-for="(city, idx) in selectedCities" :key="city.name">
+              <!-- Glow for active -->
+              <circle
+                v-if="idx === activeCityIndex"
+                :cx="cityCoords(city).x"
+                :cy="cityCoords(city).y"
+                r="8"
+                fill="none"
+                stroke="#f0a030"
+                stroke-width="1"
+                opacity="0.4"
+              />
+              <circle
+                :cx="cityCoords(city).x"
+                :cy="cityCoords(city).y"
+                :r="idx === activeCityIndex ? 5 : 3.5"
+                :fill="idx === activeCityIndex ? '#f0a030' : '#aaa'"
+                :stroke="idx === activeCityIndex ? '#ffd080' : '#fff'"
+                stroke-width="1"
+                class="city-marker"
+                @click="activeCityIndex = idx"
+              />
+              <text
+                :x="cityCoords(city).x + 10"
+                :y="cityCoords(city).y + 4"
+                fill="#fff"
+                font-size="11"
+                font-weight="600"
+                font-family="SF Pro Text, -apple-system, sans-serif"
+                class="city-map-label"
+              >{{ city.name }}</text>
+              <text
+                :x="cityCoords(city).x + 10"
+                :y="cityCoords(city).y + 16"
+                fill="#888"
+                font-size="9"
+                font-family="SF Pro Text, -apple-system, sans-serif"
+              >{{ formatCityTime(city) }}</text>
+            </g>
           </g>
         </svg>
       </div>
@@ -187,8 +190,10 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useWorldClock, CITY_LIST, type City } from '../composables/useWorldClock';
 import { geoEquirectangular, geoPath } from 'd3-geo';
+import { zoom, type D3ZoomEvent } from 'd3-zoom';
 import { feature } from 'topojson-client';
 import type { Topology } from 'topojson-specification';
+import { select } from 'd3-selection';
 
 const {
   selectedCities,
@@ -206,6 +211,8 @@ const {
 
 const showCityPicker = ref(false);
 const citySearch = ref('');
+const mapSvg = ref<SVGSVGElement | null>(null);
+const mapContainer = ref<HTMLElement | null>(null);
 
 // World map paths
 const MAP_W = 800;
@@ -221,11 +228,29 @@ onMounted(async () => {
     .translate([MAP_W / 2, MAP_H / 2]);
   const path = geoPath(projection);
   countryPaths.value = (countries as any).features.map((f: any) => path(f) || '');
+
+  // Initialize Zoom
+  if (mapSvg.value) {
+    const svgEl = mapSvg.value;
+    const zoomBehavior = zoom<SVGSVGElement, unknown>()
+      .scaleExtent([1, 8])
+      .on('zoom', (event: D3ZoomEvent<SVGSVGElement, unknown>) => {
+        select(svgEl).select('.map-zoom-group')
+          .attr('transform', event.transform.toString());
+      });
+
+    select(svgEl).call(zoomBehavior);
+  }
 });
 
 const filteredCities = computed(() => {
   const q = citySearch.value.toLowerCase();
-  return CITY_LIST.filter(c => c.name.toLowerCase().includes(q));
+  if (!q) return CITY_LIST;
+
+  return CITY_LIST.filter(c =>
+    c.name.toLowerCase().includes(q) ||
+    c.country.toLowerCase().includes(q)
+  );
 });
 
 function isAdded(city: City): boolean {

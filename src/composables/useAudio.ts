@@ -39,6 +39,7 @@ const VOLUME_KEY = 'chronos-volume';
 let sharedCtx: AudioContext | null = null;
 let masterGain: GainNode | null = null;
 let loopTimer: number | null = null;
+let ringingTimer: number | null = null;
 
 function getAudio(): { ctx: AudioContext; master: GainNode } {
     if (!sharedCtx || sharedCtx.state === 'closed') {
@@ -56,6 +57,10 @@ function stopCurrentPlayback() {
     if (loopTimer !== null) {
         clearTimeout(loopTimer);
         loopTimer = null;
+    }
+    if (ringingTimer !== null) {
+        clearTimeout(ringingTimer);
+        ringingTimer = null;
     }
 }
 
@@ -232,6 +237,29 @@ async function playForDuration(id: string, totalSeconds: number) {
     }
 }
 
+async function playRingingLoop(id: string) {
+    stopCurrentPlayback();
+
+    const soundFn = SOUNDS[id];
+    if (!soundFn) return;
+
+    const soundDuration = (SOUND_DURATIONS[id] ?? 1) * 1000;
+
+    try {
+        const { ctx, master } = getAudio();
+        if (ctx.state === 'suspended') await ctx.resume();
+
+        function play() {
+            soundFn(ctx, master);
+            ringingTimer = window.setTimeout(play, soundDuration);
+        }
+
+        play();
+    } catch (err) {
+        console.error('Failed to play ringing audio:', err);
+    }
+}
+
 export function useAudio() {
     const selectedAudio = ref<string>(AUDIO_OPTIONS[0].id);
     const savedVol = parseInt(localStorage.getItem(VOLUME_KEY) ?? '80', 10);
@@ -255,6 +283,10 @@ export function useAudio() {
         playForDuration(selectedAudio.value, 12);
     }
 
+    function playRinging() {
+        playRingingLoop(selectedAudio.value);
+    }
+
     return {
         selectedAudio,
         AUDIO_OPTIONS,
@@ -262,5 +294,7 @@ export function useAudio() {
         setVolume,
         previewSelected,
         playCompletion,
+        playRinging,
+        stopCurrentPlayback,
     };
 }
